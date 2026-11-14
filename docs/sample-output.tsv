@@ -1,0 +1,15 @@
+# 3 files, 14 findings
+high	PHP001	legacy.ini:4	allow_url_include is on: include and require can load remote code
+high	PHP006	legacy.ini:7	register_globals is on: request data becomes variables
+medium	PHP009	legacy.ini:1	session.use_strict_mode is not on: unknown session ids are accepted (fixation)
+medium	PHP002	legacy.ini:3	allow_url_fopen is on: file functions can fetch URLs, which turns path bugs into SSRF
+medium	PHP003	legacy.ini:5	display_errors is on: errors with paths and queries are sent to visitors
+medium	PHP011	legacy.ini:8	enable_dl is on: scripts can load extensions at run time
+medium	PHP010	legacy.ini:10	cgi.fix_pathinfo=1: behind nginx, /upload.jpg/x.php can run an uploaded file as PHP
+medium	PHP005	legacy.ini:11	disable_functions does not block any of: exec, system, passthru, shell_exec, proc_open, popen
+medium	PHP008	legacy.ini:12	session.cookie_httponly is not on: JavaScript can read the session cookie
+low	PHP007	legacy.ini:1	open_basedir is not set: scripts can read any file the user can
+low	PHP013	legacy.ini:1	session.cookie_secure is not on: the session cookie can travel over plain HTTP
+low	PHP004	legacy.ini:6	expose_php is on: X-Powered-By reveals the PHP version
+low	PHP012	legacy.ini:9	log_errors is off: failures leave no trace
+info	PHP000	messy.ini:3	not a setting, ignored: this line is not a setting

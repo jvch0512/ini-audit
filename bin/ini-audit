@@ -1,0 +1,88 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../lib/IniAudit.php';
+
+use function IniAudit\audit;
+use function IniAudit\sort_findings;
+
+function usage(): int
+{
+    fwrite(STDERR, "usage: ini-audit PATH [--tsv] [--fail-on medium|high|critical]\nExit: 0 ok, 1 findings at or above --fail-on, 2 bad input.\n");
+    return 2;
+}
+
+function run(array $argv): int
+{
+    $path = null;
+    $tsv = false;
+    $failOn = null;
+    for ($i = 1; $i < count($argv); $i++) {
+        $a = $argv[$i];
+        if ($a === '--tsv') {
+            $tsv = true;
+        } elseif ($a === '--fail-on') {
+            $i++;
+            if (!isset($argv[$i]) || !in_array($argv[$i], ['medium', 'high', 'critical'], true)) {
+                return usage();
+            }
+            $failOn = $argv[$i];
+        } elseif ($a !== '' && $a[0] === '-') {
+            return usage();
+        } elseif ($path !== null) {
+            return usage();
+        } else {
+            $path = $a;
+        }
+    }
+    if ($path === null) {
+        return usage();
+    }
+    if (!file_exists($path)) {
+        fwrite(STDERR, "error: no such file or directory: $path\n");
+        return 2;
+    }
+    $files = [];
+    if (is_dir($path)) {
+        $root = rtrim($path, '/');
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $f) {
+            if ($f->isFile() && strtolower($f->getExtension()) === 'ini') {
+                $files[substr($f->getPathname(), strlen($root) + 1)] = $f->getPathname();
+            }
+        }
+        ksort($files);
+    } else {
+        $files[basename($path)] = $path;
+    }
+    $all = [];
+    foreach ($files as $label => $file) {
+        $text = file_get_contents($file);
+        if ($text === false) {
+            continue;
+        }
+        array_push($all, ...audit($text, (string) $label));
+    }
+    $all = sort_findings($all);
+    $head = count($files) . ' files, ' . count($all) . ' findings';
+    echo $tsv ? "# $head\n" : "$head\n";
+    foreach ($all as $f) {
+        if ($tsv) {
+            echo "{$f->sev}\t{$f->rule}\t{$f->where}\t{$f->msg}\n";
+        } else {
+            printf("%-8s %s %s\n         %s\n", strtoupper($f->sev), $f->rule, $f->where, $f->msg);
+        }
+    }
+    if ($failOn !== null) {
+        $floor = IniAudit\RANK[$failOn];
+        foreach ($all as $f) {
+            if (IniAudit\RANK[$f->sev] <= $floor) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+exit(run($argv));
