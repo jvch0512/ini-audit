@@ -2,6 +2,8 @@
 
 ini-audit reads `php.ini` style files (also `conf.d/*.ini` and pool overrides) and flags settings that weaken a production PHP install: remote file inclusion switches, errors shown to visitors, no function restrictions, session cookies without protection flags and the `cgi.fix_pathinfo` setting that matters behind nginx. The last assignment of a key wins, like PHP itself, and the finding points at that line.
 
+![Terminal demo of ini-audit on its sample data](docs/demo.svg)
+
 **Live demo:** https://jvch0512.github.io/ini-audit/ (Synthetic php.ini files.)
 
 PHP 8, standard library only. The demo page is rendered from the tool's `--tsv` output by `scripts/site.py` (Python 3, only needed to regenerate the page).
@@ -53,3 +55,13 @@ make test    # 56 checks
 ```
 
 MIT.
+
+## Code scanning (SARIF)
+
+`scripts/tsv2sarif.py` converts the `--tsv` output into SARIF 2.1.0, so findings show up in GitHub code scanning:
+
+```sh
+php bin/ini-audit examples/ini --tsv | python3 scripts/tsv2sarif.py --tool ini-audit --prefix examples/ini > results.sarif
+```
+
+Upload `results.sarif` with `github/codeql-action/upload-sarif`. Severities map to SARIF levels (critical and high to error, medium to warning, low and info to note) and to a `security-severity` score.
